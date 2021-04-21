@@ -64,7 +64,7 @@ contract IDO is Ownable {
 
         require(
             raisedByAccount[msg.sender] <= MAX_PER_ACCOUNT,
-            'IDO: Max BNB limit is 20'
+            'IDO: Max BNB limit is 1'
         );
     }
 
