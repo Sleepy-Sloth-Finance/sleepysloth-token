@@ -1,0 +1,4 @@
+
+        npx hardhat verify --network btest 0xA4cD06341038732eBCa725CAFe12277E8A52Ca86
+        npx hardhat verify --network btest 0xF06636b326d7Dd7FdB02d01E8224E938BcFB1879
+      
