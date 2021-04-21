@@ -62,12 +62,10 @@ contract IDO is Ownable {
         raisedByAccount[msg.sender] += msg.value;
         addresses.add(msg.sender);
 
-        if (msg.sender != owner()) {
-            require(
-                raisedByAccount[msg.sender] <= MAX_PER_ACCOUNT,
-                'IDO: Max BNB limit is 20'
-            );
-        }
+        require(
+            raisedByAccount[msg.sender] <= MAX_PER_ACCOUNT,
+            'IDO: Max BNB limit is 20'
+        );
     }
 
     function withdrawBNB() public onlyOwner {
