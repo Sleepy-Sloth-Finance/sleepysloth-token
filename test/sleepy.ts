@@ -32,6 +32,29 @@ describe('Token', async () => {
   });
 
   describe('initialize', () => {
+    it.only('should max cap at 100 BNB', async () => {
+      const [account1] = accounts;
+
+      await expect(
+        ido.connect(_owner).sendBNB({
+          value: ethers.utils.parseEther('101'),
+        })
+      ).to.be.revertedWith(
+        'IDO: Max Raised BNB is 100, this amount goes above 100'
+      );
+
+      await ido.connect(_owner).sendBNB({
+        value: ethers.utils.parseEther('100'),
+      });
+
+      await expect(
+        ido.connect(account1).sendBNB({
+          value: ethers.utils.parseEther('0.5'),
+        })
+      ).to.be.revertedWith(
+        'IDO: Max Raised BNB is 100, this amount goes above 100'
+      );
+    });
     it('should allow to send BNB less then or equal to 20', async () => {
       const [account1, account2] = accounts;
 

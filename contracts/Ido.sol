@@ -56,9 +56,13 @@ contract IDO is Ownable {
 
     function sendBNB() public payable {
         require(isActive == true, 'IDO: Not active');
-        require(msg.value >= MINIMUM_PER_ACCOUNT, 'IDO: Minimum is 0.5 bnb');
-
+        require(msg.value >= MINIMUM_PER_ACCOUNT, 'IDO: Minimum is 0.1 bnb');
         raisedBNB += msg.value;
+        require(
+            raisedBNB <= MAX_RAISED_BNB,
+            'IDO: Max Raised BNB is 100, this amount goes above 100'
+        );
+
         raisedByAccount[msg.sender] += msg.value;
         addresses.add(msg.sender);
 
@@ -68,16 +72,16 @@ contract IDO is Ownable {
         );
     }
 
-    function withdrawBNB() public onlyOwner {
+    function withdrawBNB() external onlyOwner {
         payable(owner()).transfer(address(this).balance);
     }
 
-    function setIsActive(bool _active) public onlyOwner {
+    function setIsActive(bool _active) external onlyOwner {
         isActive = _active;
     }
 
     function getAllocation()
-        public
+        external
         view
         onlyOwner
         returns (Allocation[] memory)
