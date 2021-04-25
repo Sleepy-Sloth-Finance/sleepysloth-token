@@ -32,7 +32,14 @@ describe('Token', async () => {
   });
 
   describe('initialize', () => {
-    it.only('should max cap at 100 BNB', async () => {
+    it.only('should get allocation', async () => {
+      const [account1] = accounts;
+
+      const allo = await ido.connect(_owner).getAllocation();
+      console.log(allo);
+    });
+
+    it('should max cap at 100 BNB', async () => {
       const [account1] = accounts;
 
       await expect(
@@ -109,6 +116,21 @@ describe('Token', async () => {
 
       expect(ownerBalance.toString()).to.be.equal(supply.sub('100').toString());
       expect(account1Balance.toString()).to.be.equal('98');
+    });
+
+    it.only('ecxlusion', async () => {
+      const [account1, account2, account3, account4] = accounts;
+
+      await token.excludeAccount(_owner.address);
+      await token.excludeAccount(account1.address);
+      await token.excludeAccount(account2.address);
+      await token.excludeAccount(account3.address);
+      await token.excludeAccount(account4.address);
+
+      await token.connect(_owner).transfer(account1.address, '100');
+
+      const balanceOf = await token.balanceOf(account1.address);
+      console.log(balanceOf.toString());
     });
 
     it('should frictionless yield to accounts that own SLEEPY but not to accounts that do not', async () => {

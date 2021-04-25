@@ -1,4 +1,4 @@
 
-        npx hardhat verify --network binance 0x00863355D4459bf7c23AeeC716d2caAb6dE4640b
-        npx hardhat verify --network binance 0x7Ce4b724C2c602ECB71c6faB7aB86194B27287fA
+        npx hardhat verify --network btest 0x48e1B789E179c3a66b67B7d5293ae796782E659c
+        npx hardhat verify --network btest 0xf81A07d962c8Bc972FD8a3bB771E8C4B2ed6f8B2
       

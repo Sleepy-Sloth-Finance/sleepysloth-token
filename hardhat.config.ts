@@ -25,6 +25,7 @@ const {
   DEPLOYER_SECRET,
   DEPLOY_GAS_LIMIT,
   DEPLOY_GAS_PRICE,
+  CONNECTION_URL_TEST,
 } = process.env;
 
 const getNetworkConfig = (chainId: number) => {
@@ -32,7 +33,8 @@ const getNetworkConfig = (chainId: number) => {
     !CONNECTION_URL ||
     !DEPLOYER_SECRET ||
     !DEPLOY_GAS_LIMIT ||
-    !DEPLOY_GAS_PRICE
+    !DEPLOY_GAS_PRICE ||
+    !CONNECTION_URL_TEST
   ) {
     return {
       url: 'please update .env file',
