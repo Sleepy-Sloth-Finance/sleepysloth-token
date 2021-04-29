@@ -4,6 +4,7 @@ import { Token, IDO } from '../typechain/index';
 import { ethers } from 'hardhat';
 import { expect } from 'chai';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { TestUtil } from './utils/TestUtil';
 
 describe('Token', async () => {
   let token: Token;
@@ -32,36 +33,18 @@ describe('Token', async () => {
   });
 
   describe('initialize', () => {
-    it.only('should get allocation', async () => {
-      const [account1] = accounts;
+    it('should get allocation with 100s of wallets', async () => {
+      const accounts = await ethers.getSigners();
+
+      for (let i = 0; i < accounts.length; i++) {
+        await ido.connect(accounts[i]).sendBNB({
+          value: ethers.utils.parseEther('1'),
+        });
+      }
 
       const allo = await ido.connect(_owner).getAllocation();
-      console.log(allo);
     });
 
-    it('should max cap at 100 BNB', async () => {
-      const [account1] = accounts;
-
-      await expect(
-        ido.connect(_owner).sendBNB({
-          value: ethers.utils.parseEther('101'),
-        })
-      ).to.be.revertedWith(
-        'IDO: Max Raised BNB is 100, this amount goes above 100'
-      );
-
-      await ido.connect(_owner).sendBNB({
-        value: ethers.utils.parseEther('100'),
-      });
-
-      await expect(
-        ido.connect(account1).sendBNB({
-          value: ethers.utils.parseEther('0.5'),
-        })
-      ).to.be.revertedWith(
-        'IDO: Max Raised BNB is 100, this amount goes above 100'
-      );
-    });
     it('should allow to send BNB less then or equal to 20', async () => {
       const [account1, account2] = accounts;
 
@@ -107,8 +90,6 @@ describe('Token', async () => {
       const supply = await token.totalSupply();
       await token.connect(_owner).excludeAccount(_owner.address);
 
-      const isExcluded = await token.connect(_owner).isExcluded(_owner.address);
-
       // /** Set Transfers */
       await token.connect(_owner).transfer(account1.address, '100');
       const ownerBalance = await token.balanceOf(_owner.address);
@@ -118,7 +99,7 @@ describe('Token', async () => {
       expect(account1Balance.toString()).to.be.equal('98');
     });
 
-    it.only('ecxlusion', async () => {
+    it('ecxlusion', async () => {
       const [account1, account2, account3, account4] = accounts;
 
       await token.excludeAccount(_owner.address);
@@ -129,16 +110,19 @@ describe('Token', async () => {
 
       await token.connect(_owner).transfer(account1.address, '100');
 
-      const balanceOf = await token.balanceOf(account1.address);
-      console.log(balanceOf.toString());
+      // const balanceOf = await token.balanceOf(account1.address);
     });
 
     it('should frictionless yield to accounts that own SLEEPY but not to accounts that do not', async () => {
       const [account1, account2, account3, account4] = accounts;
+      await token.connect(_owner)._setPaused(false);
+
       await token.connect(_owner).excludeAccount(_owner.address);
 
       await token.connect(_owner).transfer(account1.address, '1000');
+      TestUtil.increaseTime(900);
       await token.connect(_owner).transfer(account2.address, '1000');
+      TestUtil.increaseTime(900);
       await token.connect(account1).transfer(account3.address, '100');
 
       const balanceOf1 = await token.balanceOf(account1.address);
@@ -150,6 +134,20 @@ describe('Token', async () => {
       expect(balanceOf2.toString()).to.be.equal('966');
       expect(balanceOf3.toString()).to.be.equal('95');
       expect(balanceOf4.toString()).to.be.equal('0');
+    });
+
+    it('should fail on blacklisted accounts transferring', async () => {
+      const [account1, account2] = accounts;
+
+      await token.connect(_owner)._setPaused(false);
+      await token.connect(_owner).transfer(account1.address, '1000');
+      await token
+        .connect(_owner)
+        ._setBlackListedAddress(account1.address, true);
+
+      await expect(
+        token.connect(account1).transfer(account2.address, '100')
+      ).to.be.revertedWith('Account is blacklisted from transferring');
     });
   });
 });

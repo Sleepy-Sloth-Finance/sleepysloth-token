@@ -8,7 +8,6 @@ import { ContractFactory } from '../libs/ContractFactory';
 import Web3 from 'web3';
 
 const deployedAddresses = require('../deployed-addresses/addresses.json');
-console.log(deployedAddresses);
 /**
  * Deploy upgradable contracts
  **/

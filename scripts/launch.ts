@@ -32,9 +32,9 @@ const main = async () => {
     const tokenFactory = await ContractFactory.getTokenFactory();
     const token = await tokenFactory.deploy();
     console.log('Deployed: Token', token.address);
-    const idoFactory = await ContractFactory.getIDOFactory();
-    const ido = await idoFactory.deploy();
-    console.log('Deployed: ido', ido.address);
+    // const idoFactory = await ContractFactory.getIDOFactory();
+    // const ido = await idoFactory.deploy();
+    // console.log('Deployed: ido', ido.address);
 
     const verifyScriptPath = path.join(
       __dirname,
@@ -47,7 +47,6 @@ const main = async () => {
       verifyScriptPath,
       `
         npx hardhat verify --network ${networkName} ${token.address}
-        npx hardhat verify --network ${networkName} ${ido.address}
       `
     );
 
@@ -64,7 +63,6 @@ const main = async () => {
         {
           NETWORK: networkName,
           TOKEN_ADDRESS: token.address,
-          IDO_ADDRESS: ido.address,
         },
         null,
         2

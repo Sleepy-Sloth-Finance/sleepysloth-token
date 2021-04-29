@@ -34,22 +34,27 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/utils/math/SafeMath.sol';
 import '@openzeppelin/contracts/utils/Address.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
+import './Pauser.sol';
 
-contract Token is Context, IERC20, Ownable {
+contract Token is Context, IERC20, Ownable, Pauseable {
     using SafeMath for uint256;
     using Address for address;
 
     mapping(address => uint256) private _rOwned;
     mapping(address => uint256) private _tOwned;
     mapping(address => mapping(address => uint256)) private _allowances;
-
+    mapping(address => uint256) private _timeOfLastTransfer;
     mapping(address => bool) private _isExcluded;
+    mapping(address => bool) private _blacklist;
     address[] private _excluded;
 
     string private constant _NAME = 'Sleepy Sloth';
     string private constant _SYMBOL = 'SLEEPY';
     uint8 private constant _DECIMALS = 8;
+    bool private timeLimited = true;
 
+    address public router = 0x10ED43C718714eb63d5aA57B78B54704E256024E;
+    address public pair; // Set upon launch
     uint256 private constant _MAX = ~uint256(0);
     uint256 private constant _DECIMALFACTOR = 10**uint256(_DECIMALS);
     uint256 private constant _GRANULARITY = 100;
@@ -62,7 +67,55 @@ contract Token is Context, IERC20, Ownable {
 
     uint256 private _TAX_FEE = 0;
     uint256 private _BURN_FEE = 0;
-    uint256 private constant _MAX_TX_SIZE = 1000000000000000 * _DECIMALFACTOR;
+    uint256 private transferTime = 600;
+
+    uint256 private maxTxSize = 10000000000000 * _DECIMALFACTOR;
+
+    /** Black list for bots */
+    modifier isBlackedListed(address sender, address recipient) {
+        require(
+            _blacklist[sender] == false && _blacklist[recipient] == false,
+            'BEP20: Account is blacklisted from transferring'
+        );
+        _;
+    }
+
+    modifier isPausedOverride() {
+        if (pauser() != _msgSender() && router != _msgSender()) {
+            // Ensure we can fill pool
+            require(_paused == false, 'Pauseable: Contract is paused');
+        }
+        _;
+    }
+
+    /** This is only to stop bots on initial launch. After which we don't care to much and will turn timeLimited off */
+    function isTimeLimited(address sender, address recipient) internal {
+        if (timeLimited && recipient != owner() && sender != owner()) {
+            address toDisable;
+            if (sender == pair) {
+                toDisable = recipient;
+            } else if (recipient == pair) {
+                toDisable = sender;
+            }
+
+            if (
+                toDisable == pair ||
+                toDisable == router ||
+                toDisable == address(0)
+            ) return; // Do nothing as we don't want to disable router
+
+            if (_timeOfLastTransfer[toDisable] == 0) {
+                _timeOfLastTransfer[toDisable] = block.timestamp;
+            } else {
+                require(
+                    block.timestamp - _timeOfLastTransfer[toDisable] >
+                        transferTime,
+                    'BEP20: Time since last transfer must be greater then time to transfer'
+                );
+                _timeOfLastTransfer[toDisable] = block.timestamp;
+            }
+        }
+    }
 
     constructor() public {
         _rOwned[_msgSender()] = _rTotal;
@@ -216,10 +269,6 @@ contract Token is Context, IERC20, Ownable {
     }
 
     function excludeAccount(address account) external onlyOwner() {
-        require(
-            account != 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D,
-            'We can not exclude Uniswap router.'
-        );
         require(!_isExcluded[account], 'Account is already excluded');
         if (_rOwned[account] > 0) {
             _tOwned[account] = tokenFromReflection(_rOwned[account]);
@@ -257,14 +306,15 @@ contract Token is Context, IERC20, Ownable {
         address sender,
         address recipient,
         uint256 amount
-    ) private {
+    ) private isPausedOverride isBlackedListed(sender, recipient) {
+        isTimeLimited(sender, recipient);
         require(sender != address(0), 'BEP20: transfer from the zero address');
         require(recipient != address(0), 'BEP20: transfer to the zero address');
         require(amount > 0, 'Transfer amount must be greater than zero');
 
         if (sender != owner() && recipient != owner())
             require(
-                amount <= _MAX_TX_SIZE,
+                amount <= maxTxSize,
                 'Transfer amount exceeds the maxTxAmount.'
             );
 
@@ -478,7 +528,30 @@ contract Token is Context, IERC20, Ownable {
         _BURN_FEE = burnFee;
     }
 
-    function _getMaxTxAmount() private pure returns (uint256) {
-        return _MAX_TX_SIZE;
+    function _setMaxTxSize(uint256 _maxTxSize) external onlyOwner() {
+        maxTxSize = _maxTxSize * _DECIMALFACTOR;
+    }
+
+    function _setTimeLimited(bool _timeLimited) external onlyOwner() {
+        timeLimited = _timeLimited;
+    }
+
+    function _setBlackListedAddress(address account, bool blacklisted)
+        external
+        onlyOwner()
+    {
+        _blacklist[account] = blacklisted;
+    }
+
+    function _setRouter(address _router) external onlyOwner {
+        router = _router;
+    }
+
+    function _setPair(address _pair) external onlyOwner {
+        pair = _pair;
+    }
+
+    function setTransferTime(uint256 _transferTime) external onlyOwner {
+        transferTime = _transferTime;
     }
 }
