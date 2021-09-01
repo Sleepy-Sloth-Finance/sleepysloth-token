@@ -1,5 +1,4 @@
-import { ethers, upgrades } from 'hardhat';
-import { Token, IDO } from '../../typechain/index';
+import { Token, IDO, Airdrop } from '../../typechain/index';
 import { ContractFactory } from '../../libs/ContractFactory';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 
@@ -10,6 +9,7 @@ interface InitOptions {
 interface Contracts {
   token: Token;
   ido: IDO;
+  airdrop: Airdrop;
 }
 
 export async function initTestSmartContracts({
@@ -22,5 +22,9 @@ export async function initTestSmartContracts({
   const ido = await idoFactory.connect(owner).deploy();
   ido.connect(owner).setIsActive(true);
 
-  return { token, ido };
+  const airdropFactory = await ContractFactory.getAirdropFactory();
+  const airdrop = await airdropFactory.connect(owner).deploy();
+  ido.connect(owner).setIsActive(true);
+
+  return { token, ido, airdrop };
 }

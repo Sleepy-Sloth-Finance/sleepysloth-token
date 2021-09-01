@@ -67,9 +67,9 @@ contract Token is Context, IERC20, Ownable, Pauseable {
 
     uint256 private _TAX_FEE = 0;
     uint256 private _BURN_FEE = 0;
-    uint256 private transferTime = 600;
+    uint256 private transferTime = 180; // 180 seconds to start
 
-    uint256 private maxTxSize = 10000000000000 * _DECIMALFACTOR;
+    uint256 private maxTxSize = 7500000000000 * _DECIMALFACTOR;
 
     /** Black list for bots */
     modifier isBlackedListed(address sender, address recipient) {

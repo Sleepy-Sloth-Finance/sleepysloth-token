@@ -1,0 +1,3 @@
+
+        npx hardhat verify --network binance 0xDf6fF105CA36fc7E279b31bCF1c9b63f5A84a6EA
+      

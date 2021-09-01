@@ -1,6 +1,6 @@
 import { initTestSmartContracts } from './utils/InitTestContracts';
 
-import { Token, IDO } from '../typechain/index';
+import { Token, IDO, Airdrop } from '../typechain/index';
 import { ethers } from 'hardhat';
 import { expect } from 'chai';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
@@ -9,6 +9,7 @@ import { TestUtil } from './utils/TestUtil';
 describe('Token', async () => {
   let token: Token;
   let ido: IDO;
+  let airdrop: Airdrop;
   let _owner: SignerWithAddress;
   let accounts: SignerWithAddress[];
 
@@ -27,47 +28,119 @@ describe('Token', async () => {
     _owner = owner;
     token = contracts.token;
     ido = contracts.ido;
+    airdrop = contracts.airdrop;
 
+    token._setPaused(false);
+    token._setTimeLimited(false);
     token._setBurnFee('200');
     token._setTaxFee('300');
   });
 
   describe('initialize', () => {
+    it.only('should multisend', async () => {
+      await token
+        .connect(_owner)
+        .approve(airdrop.address, ethers.utils.parseEther('100000000000'));
+
+      const balanceBfore = await token.balanceOf(accounts[0].address);
+      expect(balanceBfore.toString()).to.eq('0');
+
+      await airdrop
+        .connect(_owner)
+        .bulkSendToken(
+          token.address,
+          [accounts[0].address, accounts[1].address, accounts[2].address],
+          [1000, 1000, 1000]
+        );
+
+      const balance = await token.balanceOf(accounts[0].address);
+
+      expect(balance.toNumber()).to.be.greaterThan(0);
+      console.log(balance.toString());
+      console.log(balanceBfore.toString());
+    });
+
+    it('should only allow 0.2 bnb transfer', async () => {
+      const [account1, account2] = accounts;
+
+      await expect(
+        ido.connect(account1).sendBNB({
+          value: ethers.utils.parseEther('0.2'),
+        })
+      ).to.be.revertedWith('Account is not whitelisted');
+
+      await expect(
+        ido.connect(account1).setWhitelist([account1.address])
+      ).to.be.revertedWith('caller is not the owner');
+
+      await ido
+        .connect(_owner)
+        .setWhitelist([account1.address, account2.address]);
+
+      await expect(
+        ido.connect(account1).sendBNB({
+          value: ethers.utils.parseEther('20'),
+        })
+      ).to.be.revertedWith('0.2 BNB is max/min limit');
+      await expect(
+        ido.connect(account1).sendBNB({
+          value: ethers.utils.parseEther('0.1'),
+        })
+      ).to.be.revertedWith('0.2 BNB is max/min limit');
+
+      await ido.connect(account1).sendBNB({
+        value: ethers.utils.parseEther('0.2'),
+      });
+      await ido.connect(account2).sendBNB({
+        value: ethers.utils.parseEther('0.2'),
+      });
+
+      await expect(
+        ido.connect(account1).sendBNB({
+          value: ethers.utils.parseEther('0.2'),
+        })
+      ).to.be.revertedWith('Account already sent');
+
+      const addresses = await ido.connect(_owner).getAddresses();
+      console.log(addresses);
+    });
+
     it('should get allocation with 100s of wallets', async () => {
       const accounts = await ethers.getSigners();
 
       for (let i = 0; i < accounts.length; i++) {
+        console.log(i);
         await ido.connect(accounts[i]).sendBNB({
-          value: ethers.utils.parseEther('1'),
+          value: ethers.utils.parseEther('2'),
         });
       }
 
       const allo = await ido.connect(_owner).getAllocation();
     });
 
-    it('should allow to send BNB less then or equal to 20', async () => {
-      const [account1, account2] = accounts;
+    // it('should allow to send BNB less then or equal to 20', async () => {
+    //   const [account1, account2] = accounts;
 
-      await ido.connect(account1).sendBNB({
-        value: ethers.utils.parseEther('0.5'),
-      });
-      await ido.connect(account2).sendBNB({
-        value: ethers.utils.parseEther('0.5'),
-      });
-      await ido.connect(account2).sendBNB({
-        value: ethers.utils.parseEther('0.2'),
-      });
+    //   await ido.connect(account1).sendBNB({
+    //     value: ethers.utils.parseEther('0.5'),
+    //   });
+    //   await ido.connect(account2).sendBNB({
+    //     value: ethers.utils.parseEther('0.5'),
+    //   });
+    //   await ido.connect(account2).sendBNB({
+    //     value: ethers.utils.parseEther('0.2'),
+    //   });
 
-      const set = await ido.connect(_owner).getAllocation();
-    });
-    it('should not be able to send more then 1 bnb per account', async () => {
-      const [account1] = accounts;
-      await expect(
-        ido.connect(account1).sendBNB({
-          value: ethers.utils.parseEther('1.1'),
-        })
-      ).to.be.revertedWith('Max BNB limit is 1');
-    });
+    //   const set = await ido.connect(_owner).getAllocation();
+    // });
+    // it('should not be able to send more then 1 bnb per account', async () => {
+    //   const [account1] = accounts;
+    //   await expect(
+    //     ido.connect(account1).sendBNB({
+    //       value: ethers.utils.parseEther('1.1'),
+    //     })
+    //   ).to.be.revertedWith('Max BNB limit is 1');
+    // });
 
     it('should init the contract correctly', async () => {
       // const name = await token.name();

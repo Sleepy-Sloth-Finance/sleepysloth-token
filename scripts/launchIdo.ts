@@ -32,48 +32,43 @@ const main = async () => {
     // const tokenFactory = await ContractFactory.getTokenFactory();
     // const token = await tokenFactory.deploy();
     // console.log('Deployed: Token', token.address);
-    // const idoFactory = await ContractFactory.getIDOFactory();
-    // const ido = await idoFactory.deploy();
-    // console.log('Deployed: ido', ido.address);
+    const idoFactory = await ContractFactory.getIDOFactory();
+    const ido = await idoFactory.deploy();
+    console.log('Deployed: ido', ido.address);
 
-    // Musk
-    const airdropFactory = await ContractFactory.getAirdropFactory();
-    const airdrop = await airdropFactory.deploy();
-    console.log('Deployed: airdrop address', airdrop.address);
+    const verifyScriptPath = path.join(
+      __dirname,
+      '..',
+      'verify-contracts',
+      'verify-ido'
+    );
 
-    // const verifyScriptPath = path.join(
-    //   __dirname,
-    //   '..',
-    //   'verify-contracts',
-    //   'verify'
-    // );
+    fs.writeFileSync(
+      verifyScriptPath,
+      `
+        npx hardhat verify --network ${networkName} ${ido.address}
+      `
+    );
 
-    // fs.writeFileSync(
-    //   verifyScriptPath,
-    //   `
-    //     npx hardhat verify --network ${networkName} ${token.address}
-    //   `
-    // );
+    const addressFilePath = path.join(
+      __dirname,
+      '..',
+      'deployed-addresses',
+      'addresses-ido.json'
+    );
 
-    // const addressFilePath = path.join(
-    //   __dirname,
-    //   '..',
-    //   'deployed-addresses',
-    //   'addresses.json'
-    // );
-
-    // fs.writeFileSync(
-    //   addressFilePath,
-    //   JSON.stringify(
-    //     {
-    //       NETWORK: networkName,
-    //       TOKEN_ADDRESS: token.address,
-    //     },
-    //     null,
-    //     2
-    //   )
-    // );
-    // console.log('Contracts addresses saved to', addressFilePath.toString());
+    fs.writeFileSync(
+      addressFilePath,
+      JSON.stringify(
+        {
+          NETWORK: networkName,
+          TOKEN_ADDRESS: ido.address,
+        },
+        null,
+        2
+      )
+    );
+    console.log('Contracts addresses saved to', addressFilePath.toString());
 
     console.log(
       `============================ ${SCRIPT_NAME}: DONE ===============================`
