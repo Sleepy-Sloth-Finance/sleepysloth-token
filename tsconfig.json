@@ -4,8 +4,10 @@
     "module": "commonjs",
     "strict": true,
     "esModuleInterop": true,
-    "outDir": "dist"
+    "outDir": "dist",
+    "noImplicitAny": false
   },
+  "noImplicitAny": false,
   "include": ["./scripts", "./test", "./typechain", "./constants", "./libs"],
   "files": ["./hardhat.config.ts"]
 }

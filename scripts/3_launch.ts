@@ -1,19 +1,22 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import { network, upgrades } from 'hardhat';
 import path from 'path';
 import fs from 'fs';
+import { network, upgrades } from 'hardhat';
 import { ContractFactory } from '../libs/ContractFactory';
-import { Bojangles } from '../typechain';
+import { JanglesLPool, JanglesToken } from '../typechain';
+import { getDeployedContracts } from './utils/contracts';
+import { ethers } from 'ethers';
 
 /**
  * Deploy upgradable contracts
  **/
-const SCRIPT_NAME = 'DEPLOY BOJANGLES';
+const SCRIPT_NAME = 'DEPLOY LPool';
 
 const main = async () => {
   const networkName = network.name;
+  const addresses = require(`../deployed-addresses/addresses-${networkName}-nft.json`);
 
   try {
     console.log(
@@ -29,45 +32,15 @@ const main = async () => {
       }
     });
 
-    const nft = (await upgrades.deployProxy(
-      await ContractFactory.getBojanglesFactory(),
-      ['Bojangles', 'Mr_Bo']
-    )) as Bojangles;
-    console.log('Deployed: NFT address', nft.address);
+    const contracts = await getDeployedContracts(networkName);
 
-    const verifyScriptPath = path.join(
-      __dirname,
-      '..',
-      'verify-contracts',
-      'verify-nft'
+    console.log('Approving');
+    console.log(contracts.lpool?.address);
+    const approve = await contracts.pair?.approve(
+      contracts.lpool!.address,
+      ethers.utils.parseEther('50000000')
     );
-
-    fs.writeFileSync(
-      verifyScriptPath,
-      `
-        npx hardhat verify --network ${networkName} ${nft.address}
-      `
-    );
-
-    const addressFilePath = path.join(
-      __dirname,
-      '..',
-      'deployed-addresses',
-      'addresses-nft.json'
-    );
-
-    fs.writeFileSync(
-      addressFilePath,
-      JSON.stringify(
-        {
-          NETWORK: networkName,
-          TOKEN_ADDRESS: nft.address,
-        },
-        null,
-        2
-      )
-    );
-    console.log('Contracts addresses saved to', addressFilePath.toString());
+    await approve?.wait();
 
     console.log(
       `============================ ${SCRIPT_NAME}: DONE ===============================`

@@ -3,18 +3,18 @@ dotenv.config();
 
 import path from 'path';
 import fs from 'fs';
-import { network } from 'hardhat';
+import { network, upgrades } from 'hardhat';
 import { ContractFactory } from '../libs/ContractFactory';
-import Web3 from 'web3';
+import { JanglesLPool, JanglesToken } from '../typechain';
 
-const deployedAddresses = require('../deployed-addresses/addresses.json');
 /**
  * Deploy upgradable contracts
  **/
-const SCRIPT_NAME = 'GET PRESALE';
+const SCRIPT_NAME = 'DEPLOY LPool';
 
 const main = async () => {
   const networkName = network.name;
+  const addresses = require(`../deployed-addresses/addresses-${networkName}-nft.json`);
 
   try {
     console.log(
@@ -22,6 +22,7 @@ const main = async () => {
     );
     console.log(`Running on network: ${networkName}`);
 
+    const { BOJANGLES, JANGLES, PAIR } = addresses;
     const { DEPLOYER_ADDRESS } = process.env;
 
     [DEPLOYER_ADDRESS].forEach((value) => {
@@ -30,31 +31,40 @@ const main = async () => {
       }
     });
 
-    // Sleepy
-    const ido = await ContractFactory.getIDOAt(deployedAddresses.IDO_ADDRESS);
-    const presalers = await ido.getAllocation();
+    const Lpool = (await upgrades.deployProxy(
+      await ContractFactory.getJanglesLPoolFactory(),
+      [JANGLES, PAIR],
+      {
+        unsafeAllowCustomTypes: true,
+        unsafeAllowLinkedLibraries: true,
+      }
+    )) as JanglesLPool;
+    await Lpool.deployed();
+    console.log('Lpool Deployed', Lpool.address);
 
-    const _presalers = [];
-    let totalAmount = 0;
-    for (var i = 0; i < presalers.length; i++) {
-      const presale = presalers[i] as any;
-      const user = presale.user;
-      const amount =
-        parseFloat(Web3.utils.fromWei(presale.bnb.toString())) * 650000000000;
-      totalAmount += amount;
-      _presalers.push([user, amount]);
-    }
-
-    const preSalerPath = path.join(
+    const addressFilePath = path.join(
       __dirname,
       '..',
-      'presalers',
-      'presale.json'
+      'deployed-addresses',
+      `addresses-${networkName}-nft.json`
     );
 
-    fs.writeFileSync(preSalerPath, JSON.stringify(_presalers));
+    fs.writeFileSync(
+      addressFilePath,
+      JSON.stringify(
+        {
+          NETWORK: networkName,
+          BOJANGLES,
+          JANGLES,
+          PAIR,
+          LPOOL: Lpool.address,
+        },
+        null,
+        2
+      )
+    );
+    // console.log('Contracts addresses saved to', addressFilePath.toString());
 
-    console.log('TOTAL AMOUNT', totalAmount);
     console.log(
       `============================ ${SCRIPT_NAME}: DONE ===============================`
     );

@@ -1,4 +1,4 @@
-import { Bojangles } from '../../typechain/index';
+import { Bojangles, JanglesToken, JanglesLPool } from '../../typechain/index';
 import { ContractFactory } from '../../libs/ContractFactory';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { upgrades } from 'hardhat';
@@ -9,6 +9,8 @@ interface InitOptions {
 
 export interface NFTContracts {
   nft: Bojangles;
+  token: JanglesToken;
+  lPool: JanglesLPool;
 }
 
 export async function initNFTContracts({
@@ -19,5 +21,16 @@ export async function initNFTContracts({
     ['Bojangles', 'Mr_Bo']
   )) as Bojangles;
 
-  return { nft };
+  const token = (await upgrades.deployProxy(
+    await ContractFactory.getJanglesTokenFactory(),
+    ['Jangles', 'Jangle', nft.address]
+  )) as JanglesToken;
+
+  /** Reward token and Stakedtoken = same same */
+  const lPool = (await upgrades.deployProxy(
+    await ContractFactory.getJanglesLPoolFactory(),
+    [token.address, token.address]
+  )) as JanglesLPool;
+
+  return { nft, token, lPool };
 }

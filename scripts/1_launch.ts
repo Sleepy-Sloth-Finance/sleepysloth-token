@@ -1,10 +1,11 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import { network } from 'hardhat';
 import path from 'path';
 import fs from 'fs';
+import { network, upgrades } from 'hardhat';
 import { ContractFactory } from '../libs/ContractFactory';
+import { JanglesToken } from '../typechain';
 
 /**
  * Deploy upgradable contracts
@@ -13,6 +14,7 @@ const SCRIPT_NAME = 'DEPLOY SLEEPY CONTRACTS';
 
 const main = async () => {
   const networkName = network.name;
+  const addresses = require(`../deployed-addresses/addresses-${networkName}-nft.json`);
 
   try {
     console.log(
@@ -20,6 +22,7 @@ const main = async () => {
     );
     console.log(`Running on network: ${networkName}`);
 
+    const { BOJANGLES } = addresses;
     const { DEPLOYER_ADDRESS } = process.env;
 
     [DEPLOYER_ADDRESS].forEach((value) => {
@@ -28,33 +31,22 @@ const main = async () => {
       }
     });
 
-    // Sleepy
-    // const tokenFactory = await ContractFactory.getTokenFactory();
-    // const token = await tokenFactory.deploy();
-    // console.log('Deployed: Token', token.address);
-    const idoFactory = await ContractFactory.getIDOFactory();
-    const ido = await idoFactory.deploy();
-    console.log('Deployed: ido', ido.address);
-
-    const verifyScriptPath = path.join(
-      __dirname,
-      '..',
-      'verify-contracts',
-      'verify-ido'
-    );
-
-    fs.writeFileSync(
-      verifyScriptPath,
-      `
-        npx hardhat verify --network ${networkName} ${ido.address}
-      `
-    );
+    const token = (await upgrades.deployProxy(
+      await ContractFactory.getJanglesTokenFactory(),
+      ['Jangles', 'Jangles', BOJANGLES],
+      {
+        unsafeAllowCustomTypes: true,
+        unsafeAllowLinkedLibraries: true,
+      }
+    )) as JanglesToken;
+    await token.deployed();
+    console.log('Jangles Deployed', token.address);
 
     const addressFilePath = path.join(
       __dirname,
       '..',
       'deployed-addresses',
-      'addresses-ido.json'
+      `addresses-${networkName}-nft.json`
     );
 
     fs.writeFileSync(
@@ -62,7 +54,8 @@ const main = async () => {
       JSON.stringify(
         {
           NETWORK: networkName,
-          TOKEN_ADDRESS: ido.address,
+          BOJANGLES,
+          JANGLES: token.address,
         },
         null,
         2

@@ -1,0 +1,19 @@
+{
+  "name": "Mr. Bojangles",
+  "image": "ipfs://QmT8s6LsBTbDu9UsEpVaBveyPveyeMLWDf2sg5WG6MhKFn",
+  "description": "Mr. Bojangles Placeholder",
+  "attributes": [
+    {
+      "trait_type": "background",
+      "value": "Colorful"
+    },
+    {
+      "trait_type": "head",
+      "value": "White"
+    },
+    {
+      "trait_type": "face",
+      "value": "Question mark"
+    }
+  ]
+}
