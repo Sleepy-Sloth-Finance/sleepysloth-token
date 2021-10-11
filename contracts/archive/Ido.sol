@@ -44,32 +44,35 @@ contract IDO is Ownable {
 
     // Constants */
     uint256 private constant _BNBDECIMALS = 10**uint256(18);
-    uint256 public constant MAX_PER_ACCOUNT = 1 * _BNBDECIMALS;
-    uint256 public constant MINIMUM_PER_ACCOUNT = (1 * _BNBDECIMALS) / 10;
-    uint256 public constant MAX_RAISED_BNB = 100 * _BNBDECIMALS;
+    uint256 public constant PER_ACCOUNT = (2 * _BNBDECIMALS) / 10;
+    uint256 public constant MAX_RAISED_BNB = 23 * _BNBDECIMALS;
     bool public isActive;
 
     // Raised */
     uint256 public raisedBNB;
     EnumerableSet.AddressSet private addresses;
-    mapping(address => uint256) public raisedByAccount;
+    mapping(address => bool) public raisedByAccount;
+    mapping(address => bool) public whitelist;
 
     function sendBNB() public payable {
         require(isActive == true, 'IDO: Not active');
-        require(msg.value >= MINIMUM_PER_ACCOUNT, 'IDO: Minimum is 0.1 bnb');
+        require(
+            whitelist[msg.sender] == true,
+            'IDO: Account is not whitelisted'
+        );
+        require(msg.value == PER_ACCOUNT, 'IDO: 0.2 BNB is max/min limit');
+        require(
+            raisedByAccount[msg.sender] == false,
+            'BEP: Account already sent'
+        );
         raisedBNB += msg.value;
         require(
             raisedBNB <= MAX_RAISED_BNB,
-            'IDO: Max Raised BNB is 100, this amount goes above 100'
+            'IDO: Max Raised BNB is 23, this amount goes above 23'
         );
 
-        raisedByAccount[msg.sender] += msg.value;
+        raisedByAccount[msg.sender] = true;
         addresses.add(msg.sender);
-
-        require(
-            raisedByAccount[msg.sender] <= MAX_PER_ACCOUNT,
-            'IDO: Max BNB limit is 1'
-        );
     }
 
     function withdrawBNB() external onlyOwner {
@@ -91,10 +94,26 @@ contract IDO is Ownable {
         for (uint256 i = 0; i < addresses.length(); i++) {
             allocation[i] = Allocation({
                 user: addresses.at(i),
-                bnb: raisedByAccount[addresses.at(i)]
+                bnb: PER_ACCOUNT
             });
         }
 
         return allocation;
+    }
+
+    function getAddresses() external view onlyOwner returns (address[] memory) {
+        address[] memory _addresses = new address[](addresses.length());
+        for (uint256 i = 0; i < addresses.length(); i++) {
+            _addresses[i] = addresses.at(i);
+        }
+
+        return _addresses;
+    }
+
+    function setWhitelist(address[] calldata accounts) external onlyOwner {
+        for (uint256 i = 0; i < accounts.length; i++) {
+            address account = accounts[i];
+            whitelist[account] = true;
+        }
     }
 }

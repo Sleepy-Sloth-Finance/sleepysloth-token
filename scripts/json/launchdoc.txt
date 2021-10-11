@@ -1,0 +1,10 @@
+- Launch 4 tokens
+- Select 1
+- 400trillion Send to dead address
+- Airdrop tokens to everyone
+- Add liquidity
+- Get and set Pair
+- Set Burn (burn 500)
+- Set Taxes (tax 300)
+- Unpause Contract
+- Verify contract

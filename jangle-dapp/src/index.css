@@ -1,0 +1,33 @@
+html,
+body,
+#root {
+  /*in next the target div is __next not root*/
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  /* background-color: #faf9fa; */
+  -webkit-font-smoothing: subpixel-antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-smooth: always;
+}
+
+a:visited {
+  color: white;
+}
+
+a {
+  color: white;
+  text-decoration: none;
+}
+
+.bold-small {
+  font-weight: 700;
+  font-size: 18px;
+  color: #556cd6;
+}
+.bold {
+  font-weight: 700;
+  color: #556cd6;
+}
