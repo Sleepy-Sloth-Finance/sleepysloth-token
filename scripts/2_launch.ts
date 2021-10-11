@@ -1,18 +1,20 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import { network } from 'hardhat';
 import path from 'path';
 import fs from 'fs';
+import { network, upgrades } from 'hardhat';
 import { ContractFactory } from '../libs/ContractFactory';
+import { JanglesLPool, JanglesToken } from '../typechain';
 
 /**
  * Deploy upgradable contracts
  **/
-const SCRIPT_NAME = 'DEPLOY SLEEPY CONTRACTS';
+const SCRIPT_NAME = 'DEPLOY LPool';
 
 const main = async () => {
   const networkName = network.name;
+  const addresses = require(`../deployed-addresses/addresses-${networkName}-nft.json`);
 
   try {
     console.log(
@@ -20,6 +22,7 @@ const main = async () => {
     );
     console.log(`Running on network: ${networkName}`);
 
+    const { BOJANGLES, JANGLES, PAIR } = addresses;
     const { DEPLOYER_ADDRESS } = process.env;
 
     [DEPLOYER_ADDRESS].forEach((value) => {
@@ -28,34 +31,22 @@ const main = async () => {
       }
     });
 
-    // Sleepy
-    const tokenFactory = await ContractFactory.getTokenFactory();
-    const token = await tokenFactory.deploy();
-    console.log('Deployed: Token', token.address);
-    const idoFactory = await ContractFactory.getIDOFactory();
-    const ido = await idoFactory.deploy();
-    console.log('Deployed: ido', ido.address);
-
-    const verifyScriptPath = path.join(
-      __dirname,
-      '..',
-      'verify-contracts',
-      'verify'
-    );
-
-    fs.writeFileSync(
-      verifyScriptPath,
-      `
-        npx hardhat verify --network ${networkName} ${token.address}
-        npx hardhat verify --network ${networkName} ${ido.address}
-      `
-    );
+    const Lpool = (await upgrades.deployProxy(
+      await ContractFactory.getJanglesLPoolFactory(),
+      [JANGLES, PAIR],
+      {
+        unsafeAllowCustomTypes: true,
+        unsafeAllowLinkedLibraries: true,
+      }
+    )) as JanglesLPool;
+    await Lpool.deployed();
+    console.log('Lpool Deployed', Lpool.address);
 
     const addressFilePath = path.join(
       __dirname,
       '..',
       'deployed-addresses',
-      'addresses.json'
+      `addresses-${networkName}-nft.json`
     );
 
     fs.writeFileSync(
@@ -63,14 +54,16 @@ const main = async () => {
       JSON.stringify(
         {
           NETWORK: networkName,
-          TOKEN_ADDRESS: token.address,
-          IDO_ADDRESS: ido.address,
+          BOJANGLES,
+          JANGLES,
+          PAIR,
+          LPOOL: Lpool.address,
         },
         null,
         2
       )
     );
-    console.log('Contracts addresses saved to', addressFilePath.toString());
+    // console.log('Contracts addresses saved to', addressFilePath.toString());
 
     console.log(
       `============================ ${SCRIPT_NAME}: DONE ===============================`

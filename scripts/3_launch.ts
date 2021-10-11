@@ -3,19 +3,20 @@ dotenv.config();
 
 import path from 'path';
 import fs from 'fs';
-import { network } from 'hardhat';
+import { network, upgrades } from 'hardhat';
 import { ContractFactory } from '../libs/ContractFactory';
-import Web3 from 'web3';
+import { JanglesLPool, JanglesToken } from '../typechain';
+import { getDeployedContracts } from './utils/contracts';
+import { ethers } from 'ethers';
 
-const deployedAddresses = require('../deployed-addresses/addresses.json');
-console.log(deployedAddresses);
 /**
  * Deploy upgradable contracts
  **/
-const SCRIPT_NAME = 'GET PRESALE';
+const SCRIPT_NAME = 'DEPLOY LPool';
 
 const main = async () => {
   const networkName = network.name;
+  const addresses = require(`../deployed-addresses/addresses-${networkName}-nft.json`);
 
   try {
     console.log(
@@ -31,31 +32,16 @@ const main = async () => {
       }
     });
 
-    // Sleepy
-    const ido = await ContractFactory.getIDOAt(deployedAddresses.IDO_ADDRESS);
-    const presalers = await ido.getAllocation();
+    const contracts = await getDeployedContracts(networkName);
 
-    const _presalers = [];
-    let totalAmount = 0;
-    for (var i = 0; i < presalers.length; i++) {
-      const presale = presalers[i] as any;
-      const user = presale.user;
-      const amount =
-        parseFloat(Web3.utils.fromWei(presale.bnb.toString())) * 650000000000;
-      totalAmount += amount;
-      _presalers.push([user, amount]);
-    }
-
-    const preSalerPath = path.join(
-      __dirname,
-      '..',
-      'presalers',
-      'presale.json'
+    console.log('Approving');
+    console.log(contracts.lpool?.address);
+    const approve = await contracts.pair?.approve(
+      contracts.lpool!.address,
+      ethers.utils.parseEther('50000000')
     );
+    await approve?.wait();
 
-    fs.writeFileSync(preSalerPath, JSON.stringify(_presalers));
-
-    console.log('TOTAL AMOUNT', totalAmount);
     console.log(
       `============================ ${SCRIPT_NAME}: DONE ===============================`
     );
